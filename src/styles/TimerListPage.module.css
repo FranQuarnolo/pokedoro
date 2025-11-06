@@ -1,0 +1,56 @@
+.container {
+  padding: 1rem;
+  padding-bottom: 6rem;
+}
+
+.logo {
+  width: 100%;
+  height: auto;
+}
+
+.subtitle {
+  font-weight: 400;
+  margin-bottom: 1.5rem; /* Un poco más de espacio */
+  font-size: 1.4rem; /* Título un poco más grande */
+  color: #c9d1d9; /* Color de texto más claro para títulos */
+}
+
+.listItem {
+  background-color: #161b22; /* Fondo de item más oscuro (similar a GitHub cards) */
+  padding: 1rem 1.5rem !important;
+  border-radius: 12px; /* Bordes más redondeados */
+  margin-bottom: 0.9rem; /* Un poco más de espacio entre items */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el oscuro */
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease,
+    background-color 0.2s ease;
+  border: 1px solid #30363d; /* Borde sutil */
+}
+
+.listItem:hover {
+  transform: translateY(-3px); /* Desplazamiento más notorio */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); /* Sombra más fuerte al hover */
+  background-color: #1f252c; /* Ligero cambio de fondo al hover */
+}
+
+/* Ajuste para el texto dentro del Meta de la lista de AntD */
+.listItem .ant-list-item-meta-title {
+  color: #e6edf3 !important; /* Título del item más claro */
+  font-weight: 600 !important;
+}
+
+.listItem .ant-list-item-meta-description {
+  color: #8b949e !important; /* Descripción del item un poco más tenue */
+}
+
+.fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); /* Sombra del FAB más oscura */
+  background-color: #8c52ff !important; /* Color primario personalizado si quieres */
+  border-color: #8c52ff !important;
+}
+.fab:hover {
+  background-color: #a06eff !important; /* Ligeramente más claro al hover */
+}
