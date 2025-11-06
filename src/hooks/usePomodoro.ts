@@ -1,15 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 
-export const usePomodoro = (initialSeconds: number) => {
-    // Estado para el tiempo restante
+export const usePomodoro = (initialSeconds: number, onFinish?: () => void) => {
     const [timeLeft, setTimeLeft] = useState(initialSeconds);
-    // Estado para saber si está corriendo
     const [isRunning, setIsRunning] = useState(false);
-
-    // Usamos useRef para el ID del intervalo, esto evita re-renders
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Función para limpiar el intervalo (reutilizable)
     const clearTimer = () => {
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
@@ -17,48 +12,40 @@ export const usePomodoro = (initialSeconds: number) => {
         }
     };
 
-    // --- API del Hook ---
-
     const start = useCallback(() => {
         setIsRunning(true);
     }, []);
 
     const pause = useCallback(() => {
         setIsRunning(false);
-        clearTimer(); // Limpiamos al pausar
+        clearTimer();
     }, []);
 
-    const reset = useCallback((newSeconds: number) => {
-        pause(); // Pausamos
-        setTimeLeft(newSeconds); // Reseteamos el tiempo
-    }, [pause]);
+    const reset = useCallback(
+        (newSeconds: number) => {
+            pause();
+            setTimeLeft(newSeconds);
+        },
+        [pause]
+    );
 
-    // El efecto principal que maneja el temporizador
     useEffect(() => {
-        // Si no está corriendo, no hacemos nada
-        if (!isRunning) {
-            return;
-        }
+        if (!isRunning) return;
 
-        // Si está corriendo, iniciamos el intervalo
         intervalRef.current = setInterval(() => {
-            setTimeLeft(prev => {
+            setTimeLeft((prev) => {
                 if (prev <= 1) {
-                    // Si llega a 0 (o 1), paramos el timer y limpiamos
                     clearTimer();
                     setIsRunning(false);
-                    // Opcional: aquí podrías reproducir un sonido
+                    onFinish?.(); // 🔔 callback cuando termina
                     return 0;
                 }
-                // Restamos 1 segundo
                 return prev - 1;
             });
-        }, 1000); // Se ejecuta cada segundo
+        }, 1000);
 
-        // Función de limpieza: se ejecuta cuando el componente se desmonta
-        // o cuando 'isRunning' cambia (de true a false)
         return clearTimer;
-    }, [isRunning]); // Este efecto depende SOLAMENTE de 'isRunning'
+    }, [isRunning, onFinish]);
 
     return { timeLeft, isRunning, start, pause, reset };
 };

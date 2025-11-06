@@ -1,6 +1,5 @@
-// src/pages/ActiveTimerPage.tsx
-import React, { useState, useEffect } from "react";
-import { Button, Modal, Input, Form, InputNumber } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+import { Button, Modal, Input, Form, InputNumber, notification } from "antd";
 import { SettingOutlined, ReloadOutlined } from "@ant-design/icons";
 import { PokemonSelector } from "../components/pokemon/PokemonSelector";
 import { PokemonSprite } from "../components/pokemon/PokemonSprite";
@@ -24,12 +23,37 @@ const formatTime = (seconds: number) => {
 
 export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
   const { updateSession } = useTimers();
-
   const initialSeconds = session.durationMinutes * 60;
-  const { timeLeft, isRunning, start, pause, reset } =
-    usePomodoro(initialSeconds);
 
-  const [hasStarted, setHasStarted] = useState(false); // controla visibilidad de Reset
+  // 🔔 audio ref para sonido final
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    audioRef.current = new Audio("/sounds/ding.mp3");
+    if (audioRef.current) audioRef.current.volume = 0.7;
+  }, []);
+
+  const handleFinish = () => {
+    // reproducir sonido
+    try {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+      }
+    } catch {}
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    notification.open({
+      message: "Pomodoro finalizado",
+      description: "Tu sesión terminó 🎯",
+      placement: "top",
+    });
+  };
+
+  const { timeLeft, isRunning, start, pause, reset } = usePomodoro(
+    initialSeconds,
+    handleFinish
+  );
+
+  const [hasStarted, setHasStarted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
@@ -48,12 +72,6 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
   }, [session]);
 
   const handleSaveSettings = (values: any) => {
-    updateSession(session.id, {
-      name: values.name,
-      pokemonId: values.pokemonId.toLowerCase().trim(),
-      pokemonNickname: values.pokemonNickname,
-      durationMinutes: Number(values.durationMinutes),
-    });
     const updated = {
       ...session,
       name: values.name,
@@ -62,19 +80,13 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
       durationMinutes: Number(values.durationMinutes),
     };
     updateSession(session.id, updated);
-
-    // 🔽 nueva línea: reflejarlo en la vista actual sin salir
-    Object.assign(session, updated);
-
-    setIsModalOpen(false);
-
+    Object.assign(session, updated); // refresca sin salir
     setIsModalOpen(false);
   };
 
   const handleStartPause = () => {
-    if (isRunning) {
-      pause();
-    } else {
+    if (isRunning) pause();
+    else {
       start();
       setHasStarted(true);
     }
@@ -91,7 +103,7 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
         <Button type="text" size="small" onClick={onBack}>
           ‹ Mis Timers
         </Button>
-
+        <h3 className={styles.headerTitle}>{session.name}</h3>
         <Button
           type="text"
           icon={<SettingOutlined />}
@@ -102,7 +114,6 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
 
       <main className={styles.mainContent}>
         <div className={styles.timerDisplay}>{formatTime(timeLeft)}</div>
-        <h3>{session.name}</h3>
         <div className={styles.pokemonContainer}>
           <PokemonSprite
             pokemonId={session.pokemonId}
@@ -113,7 +124,6 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
           </p>
         </div>
 
-        {/* Botonera: primaria + reset circular a la derecha */}
         <div className={styles.actionsRow}>
           <Button
             type="primary"
@@ -136,7 +146,6 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
         </div>
       </main>
 
-      {/* Modal de configuración */}
       <Modal
         title="Configurar sesión"
         open={isModalOpen}
