@@ -1,63 +1,73 @@
-# 🕒 Pokédoro — Pomodoro App con Pokémon
+<h1 align="center">🕒 Pokédoro — Pomodoro App con Pokémon</h1>
 
-¡Bienvenido a **Pokédoro**!  
-Una app Pomodoro desarrollada en **React + TypeScript + Vite**, con temática Pokémon.  
-Cada sesión de concentración invoca a un Pokémon diferente que te acompaña mientras trabajás o estudiás.  
-Cuando termina el tiempo... 🔔 suena un aviso, vibra tu dispositivo y tu Pokémon celebra contigo.
+<p align="center">
+  <strong>Tu compañero Pokémon para mantenerte enfocado 🎯</strong><br>
+  Desarrollado en <b>React + TypeScript + Vite</b>
+</p>
 
-<div align="center">
+<p align="center">
   <img src="https://play.pokemonshowdown.com/sprites/ani/pikachu.gif" height="80" />
   <img src="https://play.pokemonshowdown.com/sprites/ani/psyduck.gif" height="80" />
   <img src="https://play.pokemonshowdown.com/sprites/ani/fearow.gif" height="80" />
   <img src="https://play.pokemonshowdown.com/sprites/ani/snorlax.gif" height="80" />
-</div>
+</p>
+
+---
+
+## 🧭 Descripción
+
+**Pokédoro** es una aplicación Pomodoro con temática Pokémon.  
+Cada sesión de concentración invoca a un Pokémon distinto que te acompaña mientras trabajás o estudiás.  
+Cuando termina el tiempo... 🔔 suena un aviso, tu dispositivo vibra y tu Pokémon celebra con vos.
 
 ---
 
 ## 🚀 Stack técnico
 
-**Frontend:**
+### 🧱 Frontend
 
-- [React 18](https://react.dev/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Vite](https://vite.dev/)
-- [Ant Design](https://ant.design/) (UI Components)
-- [Day.js](https://day.js.org/) (manejo de tiempo)
+- ⚛️ [React 18](https://react.dev/)
+- 🧩 [TypeScript](https://www.typescriptlang.org/)
+- ⚡ [Vite](https://vite.dev/)
+- 🎨 [Ant Design](https://ant.design/) (UI Components)
+- ⏱️ [Day.js](https://day.js.org/) (manejo de tiempo)
 
-**Lógica de negocio:**
+### 🧠 Lógica de negocio
 
-- Hook personalizado `usePomodoro()` con control de tiempo, pausa y reinicio.
+- Hook personalizado `usePomodoro()` para control de tiempo, pausa y reinicio.
 - Sonido y vibración al finalizar cada ciclo.
 - Configuración dinámica de sesión (nombre, Pokémon, duración).
-- Almacenamiento de sesiones con **Context API** (`TimersContext`).
+- Persistencia de datos mediante **Context API** (`TimersContext`).
 
 ---
 
-## 🧩 Estructura básica
+## 🗂️ Estructura del proyecto
 
+```
 src/
 ├── components/
-│ ├── pokemon/
-│ │ ├── PokemonSprite.tsx ← muestra al Pokémon animado
-│ │ └── PokemonSelector.tsx ← selector con miniaturas
-│ └── ui/
+│   ├── pokemon/
+│   │   ├── PokemonSprite.tsx        # Muestra al Pokémon animado
+│   │   └── PokemonSelector.tsx      # Selector con miniaturas
+│   └── ui/
 ├── hooks/
-│ └── usePomodoro.ts ← lógica principal del temporizador
+│   └── usePomodoro.ts               # Lógica principal del temporizador
 ├── pages/
-│ ├── TimerListPage.tsx ← lista de timers
-│ └── ActiveTimerPage.tsx ← pantalla activa de Pomodoro
+│   ├── TimerListPage.tsx            # Lista de timers
+│   └── ActiveTimerPage.tsx          # Pantalla activa del Pomodoro
 ├── contexts/
-│ └── TimersContext.tsx
+│   └── TimersContext.tsx
 ├── styles/
-│ ├── ActiveTimerPage.module.css
-│ └── global.css
+│   ├── ActiveTimerPage.module.css
+│   └── global.css
 └── main.tsx
+```
 
 ---
 
 ## ⚙️ Instalación y ejecución
 
-````bash
+```bash
 # Instalar dependencias
 npm install
 
@@ -66,48 +76,46 @@ npm run dev
 
 # Compilar para producción
 npm run build
+```
 
-Abrí http://localhost:5173
- para ver la app.
+Abrí 👉 [http://localhost:5173](http://localhost:5173) para ver la app.
 
-🔔 Funcionalidades clave
+---
 
-🕒 Ciclos Pomodoro personalizables (duración configurable).
+## 🔔 Funcionalidades clave
 
-🧠 Persistencia de sesiones en contexto global.
+✅ **Ciclos Pomodoro personalizables** (duración configurable)  
+💾 **Persistencia de sesiones** en contexto global  
+🎵 **Sonido y vibración** al completar un ciclo  
+🖥️ **Interfaz responsiva** con modo oscuro  
+🐾 **Pokémon animado** que te acompaña durante el trabajo
 
-🎵 Notificación sonora y vibración al completar un ciclo.
+---
 
-🧩 Interfaz responsiva y dark mode.
+## 🧰 Desarrollo y linting
 
-🐾 Pokémon animado que te acompaña en cada sesión.
+Este proyecto sigue la plantilla oficial de **Vite** con soporte para **React + TypeScript + ESLint**.
 
-🧰 Desarrollo y linting
+Podés ampliar las reglas de linting para proyectos más grandes:
 
-Este proyecto sigue la plantilla oficial de Vite con ESLint y soporte para React + TypeScript.
-Podés ampliar las reglas de ESLint para proyectos grandes siguiendo las recomendaciones de Vite:
+```js
+import reactX from "eslint-plugin-react-x";
+import reactDom from "eslint-plugin-react-dom";
+```
 
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+> Más detalles en la [guía oficial de Vite](https://vite.dev/guide/).
 
+---
 
-Configuraciones avanzadas disponibles en la guía oficial
-.
+## 💫 Créditos
 
-💫 Créditos
+- 🎨 Sprites de Pokémon cortesía de [Pokémon Showdown](https://play.pokemonshowdown.com/)
+- 🔊 Sonidos libres de [Freesound.org](https://freesound.org/)
+- ⏳ Inspirado en el método **Pomodoro**, con un toque nostálgico Pokémon
 
-Sprites de Pokémon cortesía de Pokémon Showdown
-.
-
-Sonidos libres de Freesound.org
-.
-
-Inspirado por el clásico método Pomodoro, con un toque de nostalgia Pokémon.
+---
 
 <div align="center">
-
-🎯 “La concentración es tu mejor ataque. ¡Atrápalos a todos, uno por uno!”
-<img src="https://play.pokemonshowdown.com/sprites/ani/lucario.gif" height="90" />
-
-</div> ```
-````
+  <h3>🎯 “La concentración es tu mejor ataque. ¡Atrápalos a todos, uno por uno!”</h3>
+  <img src="https://play.pokemonshowdown.com/sprites/ani/lucario.gif" height="100" />
+</div>
