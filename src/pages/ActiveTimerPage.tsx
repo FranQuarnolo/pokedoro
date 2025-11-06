@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Button, Modal, Input, Form, InputNumber, notification } from "antd";
-import { SettingOutlined, ReloadOutlined } from "@ant-design/icons";
-import { PokemonSelector } from "../components/pokemon/PokemonSelector";
+import { Button, notification } from "antd";
+import {
+  SettingOutlined,
+  ReloadOutlined,
+  ArrowLeftOutlined,
+} from "@ant-design/icons";
 import { PokemonSprite } from "../components/pokemon/PokemonSprite";
 import { usePomodoro } from "../hooks/usePomodoro";
 import { useTimers } from "../contexts/TimersContext";
 import styles from "../styles/ActiveTimerPage.module.css";
 import type { PomoSession } from "../types";
+import { SessionModal } from "./SessionModal";
 
 interface Props {
   session: PomoSession;
@@ -23,29 +27,50 @@ const formatTime = (seconds: number) => {
 
 export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
   const { updateSession } = useTimers();
-  const initialSeconds = session.durationMinutes * 60;
 
-  // 🔔 audio ref para sonido final
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Sesión local para re-render inmediato al editar
+  const [current, setCurrent] = useState<PomoSession>(session);
   useEffect(() => {
-    audioRef.current = new Audio("/sounds/ding.mp3");
-    if (audioRef.current) audioRef.current.volume = 0.7;
+    // si cambiaste de sesión desde la lista, sincroniza
+    setCurrent(session);
+  }, [session.id]);
+
+  const initialSeconds = Math.round(current.durationMinutes * 60);
+
+  // sonidos
+  const tapRef = useRef<HTMLAudioElement | null>(null);
+  const startRef = useRef<HTMLAudioElement | null>(null);
+  const endRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    tapRef.current = new Audio("/sounds/tap.mp3");
+    startRef.current = new Audio("/sounds/start.mp3");
+    endRef.current = new Audio("/sounds/end.mp3");
+    [tapRef.current, startRef.current, endRef.current].forEach((a) => {
+      if (a) a.volume = 0.7;
+    });
   }, []);
 
-  const handleFinish = () => {
-    // reproducir sonido
+  const play = (ref: React.MutableRefObject<HTMLAudioElement | null>) => {
     try {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play();
+      if (ref.current) {
+        ref.current.currentTime = 0;
+        ref.current.play();
       }
     } catch {}
+  };
+
+  const [hasStarted, setHasStarted] = useState(false);
+
+  const handleFinish = () => {
+    play(endRef);
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     notification.open({
       message: "Pomodoro finalizado",
       description: "Tu sesión terminó 🎯",
       placement: "top",
     });
+    setHasStarted(false); // vuelve a "Iniciar"
   };
 
   const { timeLeft, isRunning, start, pause, reset } = usePomodoro(
@@ -53,46 +78,21 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
     handleFinish
   );
 
-  const [hasStarted, setHasStarted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form] = Form.useForm();
-
-  useEffect(() => {
-    if (!isRunning) {
-      reset(initialSeconds);
-      setHasStarted(false);
-    }
-    form.setFieldsValue({
-      name: session.name,
-      pokemonId: session.pokemonId,
-      pokemonNickname: session.pokemonNickname,
-      durationMinutes: session.durationMinutes,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
-
-  const handleSaveSettings = (values: any) => {
-    const updated = {
-      ...session,
-      name: values.name,
-      pokemonId: values.pokemonId.toLowerCase().trim(),
-      pokemonNickname: values.pokemonNickname,
-      durationMinutes: Number(values.durationMinutes),
-    };
-    updateSession(session.id, updated);
-    Object.assign(session, updated); // refresca sin salir
-    setIsModalOpen(false);
-  };
 
   const handleStartPause = () => {
-    if (isRunning) pause();
-    else {
+    play(tapRef);
+    if (isRunning) {
+      pause();
+    } else {
+      play(startRef);
       start();
       setHasStarted(true);
     }
   };
 
   const handleReset = () => {
+    play(tapRef);
     reset(initialSeconds);
     setHasStarted(false);
   };
@@ -101,9 +101,9 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
     <div className={styles.container}>
       <header className={styles.header}>
         <Button type="text" size="small" onClick={onBack}>
-          ‹ Mis Timers
+          <ArrowLeftOutlined />
         </Button>
-        <h3 className={styles.headerTitle}>{session.name}</h3>
+        <h3 className={styles.headerTitle}>{current.name}</h3>
         <Button
           type="text"
           icon={<SettingOutlined />}
@@ -116,11 +116,11 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
         <div className={styles.timerDisplay}>{formatTime(timeLeft)}</div>
         <div className={styles.pokemonContainer}>
           <PokemonSprite
-            pokemonId={session.pokemonId}
+            pokemonId={current.pokemonId}
             isTimerRunning={isRunning}
           />
           <p className={styles.pokemonName}>
-            {session.pokemonNickname || session.pokemonId}
+            {current.pokemonNickname || current.pokemonId}
           </p>
         </div>
 
@@ -146,39 +146,37 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
         </div>
       </main>
 
-      <Modal
-        title="Configurar sesión"
+      <SessionModal
         open={isModalOpen}
+        mode="edit"
+        initialValues={current}
         onCancel={() => setIsModalOpen(false)}
-        onOk={() => form.submit()}
-        okText="Guardar"
-      >
-        <Form form={form} layout="vertical" onFinish={handleSaveSettings}>
-          <Form.Item name="name" label="Nombre" rules={[{ required: true }]}>
-            <Input placeholder="Ej: Estudio" />
-          </Form.Item>
+        onSubmit={(values) => {
+          // `values.durationSeconds` viene del modal. Fallback por si aún no lo agregaste.
+          const durationSeconds =
+            typeof values.durationSeconds === "number"
+              ? values.durationSeconds
+              : Math.round(Number(values.durationMinutes) * 60);
 
-          <Form.Item
-            name="pokemonId"
-            label="Pokémon"
-            rules={[{ required: true, message: "Elegí un Pokémon" }]}
-          >
-            <PokemonSelector placeholder="Ej: pikachu, gengar, snorlax" />
-          </Form.Item>
+          const updated: PomoSession = {
+            ...current,
+            name: values.name,
+            pokemonId: values.pokemonId.toLowerCase().trim(),
+            pokemonNickname: values.pokemonNickname,
+            durationMinutes: Number(values.durationMinutes),
+          };
 
-          <Form.Item name="pokemonNickname" label="Apodo del Pokémon">
-            <Input placeholder="Opcional" />
-          </Form.Item>
+          // persistir en contexto
+          updateSession(current.id, updated);
 
-          <Form.Item
-            name="durationMinutes"
-            label="Duración (min)"
-            rules={[{ required: true, type: "number", min: 1 }]}
-          >
-            <InputNumber min={1} style={{ width: "100%" }} />
-          </Form.Item>
-        </Form>
-      </Modal>
+          // refrescar UI y timer al instante
+          setCurrent(updated);
+          reset(durationSeconds);
+          setHasStarted(false);
+
+          setIsModalOpen(false);
+        }}
+      />
     </div>
   );
 };

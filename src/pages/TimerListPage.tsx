@@ -1,45 +1,117 @@
-import React, { useState } from "react";
-import {
-  Button,
-  List,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Popconfirm,
-} from "antd";
+import React, { useMemo } from "react";
+import { Button, List, Popconfirm } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
 import { useTimers } from "../contexts/TimersContext";
-import styles from "../styles/TimerListPage.module.css"; // Crearemos este CSS
-import { PokemonSelector } from "../components/pokemon/PokemonSelector";
+import styles from "../styles/TimerListPage.module.css";
 import type { PomoSession } from "../types";
 import logo from "../assets/logo.png";
+import { SessionModal } from "./SessionModal";
 
 interface Props {
-  // Esta prop es nuestro "router": nos dice qué sesión seleccionar
   onSessionSelect: (session: PomoSession) => void;
 }
 
-export const TimerListPage: React.FC<Props> = ({ onSessionSelect }) => {
-  const { sessions, addSession, deleteSession } = useTimers();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form] = Form.useForm();
+function formatDuration(minsDecimal: number) {
+  const total = Math.round(minsDecimal * 60); // segundos exactos
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m > 0 && s === 0) return `${m} min`;
+  if (m > 0 && s > 0) return `${m} min ${s} s`;
+  return `${s} s`;
+}
 
-  const handleCreateSession = (values: any) => {
-    const newSession: PomoSession = {
-      id: Date.now().toString(), // ID simple basado en timestamp
-      name: values.name,
-      durationMinutes: values.durationMinutes,
-      pokemonId: values.pokemonId.toLowerCase().trim() || "pikachu", // Default
-      pokemonNickname: values.pokemonNickname || "",
-    };
-    addSession(newSession);
-    form.resetFields();
-    setIsModalOpen(false);
+// Item sortable
+const SortableItem: React.FC<{
+  session: PomoSession;
+  onClick: () => void;
+  onConfirmDelete: (e: React.MouseEvent) => void;
+}> = ({ session, onClick, onConfirmDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: session.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    cursor: "grab",
+    ...(isDragging ? { opacity: 0.85 } : null),
+  } as React.CSSProperties;
+
+  return (
+    <List.Item
+      ref={setNodeRef}
+      style={style}
+      className={styles.listItem}
+      onClick={onClick}
+      // Área drag: todo el item. Si querés un “handle”, pasa {...listeners} a un icono.
+      {...attributes}
+      {...listeners}
+      actions={[
+        <Popconfirm
+          title="¿Borrar este timer?"
+          onConfirm={() => onConfirmDelete}
+          okText="Sí"
+          cancelText="No"
+        >
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </Popconfirm>,
+      ]}
+    >
+      <List.Item.Meta
+        title={session.name}
+        description={`${formatDuration(session.durationMinutes)} | ${
+          session.pokemonNickname || session.pokemonId
+        }`}
+      />
+    </List.Item>
+  );
+};
+
+export const TimerListPage: React.FC<Props> = ({ onSessionSelect }) => {
+  const { sessions, addSession, deleteSession, reorderSessions } = useTimers();
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  const ids = useMemo(() => sessions.map((s) => s.id), [sessions]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sessions.findIndex((s) => s.id === active.id);
+    const newIndex = sessions.findIndex((s) => s.id === over.id);
+    const next = arrayMove(sessions, oldIndex, newIndex);
+    reorderSessions(next);
   };
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Evita que el click active el onSessionSelect
+    e.stopPropagation();
     deleteSession(id);
   };
 
@@ -47,44 +119,34 @@ export const TimerListPage: React.FC<Props> = ({ onSessionSelect }) => {
     <div className={styles.container}>
       <img src={logo} alt="logo" className={styles.logo} />
 
-      <p className={styles.subtitle}>Mis Timers:</p>
+      {/* Alternativas de título: */}
+      {/* <p className={styles.subtitle}>Tus Pokedoros</p> */}
+      {/* <p className={styles.subtitle}>Sesiones</p> */}
+      {/* <p className={styles.subtitle}>Tu equipo de foco</p> */}
+      <p className={styles.subtitle}>Tus Pokedoros</p>
 
-      <List
-        itemLayout="horizontal"
-        dataSource={sessions}
-        locale={{ emptyText: "Aún no tienes timers. ¡Crea uno!" }}
-        renderItem={(session) => (
-          <List.Item
-            className={styles.listItem}
-            onClick={() => onSessionSelect(session)}
-            actions={[
-              <Popconfirm
-                title="¿Borrar este timer?"
-                onConfirm={(e) => handleDelete(e!, session.id)}
-                onCancel={(e) => e?.stopPropagation()}
-                okText="Sí"
-                cancelText="No"
-              >
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </Popconfirm>,
-            ]}
-          >
-            <List.Item.Meta
-              title={session.name}
-              description={`${session.durationMinutes} min | ${
-                session.pokemonNickname || session.pokemonId
-              }`}
-            />
-          </List.Item>
-        )}
-      />
+      <DndContext
+        onDragEnd={handleDragEnd}
+        sensors={sensors}
+        modifiers={[restrictToVerticalAxis]}
+      >
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <List
+            itemLayout="horizontal"
+            dataSource={sessions}
+            locale={{ emptyText: "Aún no tienes timers. ¡Crea uno!" }}
+            renderItem={(session) => (
+              <SortableItem
+                key={session.id}
+                session={session}
+                onClick={() => onSessionSelect(session)}
+                onConfirmDelete={(e) => handleDelete(e as any, session.id)}
+              />
+            )}
+          />
+        </SortableContext>
+      </DndContext>
 
-      {/* Botón Flotante (FAB) para crear nuevo */}
       <Button
         className={styles.fab}
         type="primary"
@@ -94,45 +156,22 @@ export const TimerListPage: React.FC<Props> = ({ onSessionSelect }) => {
         onClick={() => setIsModalOpen(true)}
       />
 
-      {/* Modal de Creación */}
-      <Modal
-        title="Crear Nuevo Pomo-mon"
+      <SessionModal
         open={isModalOpen}
+        mode="create"
         onCancel={() => setIsModalOpen(false)}
-        onOk={() => form.submit()}
-      >
-        <Form form={form} layout="vertical" onFinish={handleCreateSession}>
-          <Form.Item
-            name="name"
-            label="Nombre de la Sesión"
-            rules={[{ required: true, message: "Dale un nombre" }]}
-          >
-            <Input placeholder="Ej: Estudio React" />
-          </Form.Item>
-          <Form.Item
-            name="durationMinutes"
-            label="Duración (minutos)"
-            initialValue={25}
-            rules={[{ required: true, message: "Define un tiempo" }]}
-          >
-            <InputNumber min={1} max={120} />
-          </Form.Item>
-          <Form.Item
-            name="pokemonId"
-            label="Pokémon (ID)"
-            initialValue={"pikachu"}
-            rules={[{ required: true, message: "Elige un Pokémon" }]}
-          >
-            <PokemonSelector placeholder="Ej: pikachu" />
-          </Form.Item>
-          <Form.Item
-            name="pokemonNickname"
-            label="Apodo del Pokémon (Opcional)"
-          >
-            <Input placeholder="Ej: Juan" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onSubmit={(values) => {
+          const newSession: PomoSession = {
+            id: Date.now().toString(),
+            name: values.name,
+            durationMinutes: values.durationMinutes, // puede ser decimal (ej. 0.1666…)
+            pokemonId: values.pokemonId.toLowerCase().trim() || "pikachu",
+            pokemonNickname: values.pokemonNickname || "",
+          };
+          addSession(newSession);
+          setIsModalOpen(false);
+        }}
+      />
     </div>
   );
 };

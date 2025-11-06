@@ -54,3 +54,11 @@
 .fab:hover {
   background-color: #a06eff !important; /* Ligeramente más claro al hover */
 }
+
+.listItem {
+  user-select: none;
+  touch-action: pan-y;
+}
+.listItem:active {
+  cursor: grabbing;
+}
