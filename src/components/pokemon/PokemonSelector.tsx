@@ -1,6 +1,6 @@
-
+ 
 import React, { useEffect, useMemo, useState } from "react";
-import { Select, Avatar, Spin } from "antd";
+import { Select, Avatar } from "antd";
 
 type Option = { value: string; label: string; id: number; sprite: string };
 
