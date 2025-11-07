@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 export const usePomodoro = (initialSeconds: number, onFinish?: () => void) => {
     const [timeLeft, setTimeLeft] = useState(initialSeconds);
     const [isRunning, setIsRunning] = useState(false);
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const intervalRef = useRef<any | null>(null);
 
     const clearTimer = () => {
         if (intervalRef.current) {
