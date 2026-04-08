@@ -1,10 +1,7 @@
- 
-import React, { useEffect, useMemo, useState } from "react";
-import { Select, Avatar } from "antd";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type Option = { value: string; label: string; id: number; sprite: string };
 
-// PokeAPI returns paginated list. We fetch all names with a large limit.
 const POKE_LIST_URL = "https://pokeapi.co/api/v2/pokemon?limit=1302";
 
 function extractIdFromUrl(url: string): number {
@@ -13,7 +10,6 @@ function extractIdFromUrl(url: string): number {
 }
 
 function spriteUrl(id: number) {
-  // Lightweight static sprite from PokeAPI repo
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 }
 
@@ -21,17 +17,21 @@ export interface PokemonSelectorProps {
   value?: string;
   onChange?: (v: string) => void;
   placeholder?: string;
-  style?: React.CSSProperties;
 }
 
 export const PokemonSelector: React.FC<PokemonSelectorProps> = ({
   value,
   onChange,
   placeholder = "Buscar Pokémon...",
-  style,
 }) => {
   const [options, setOptions] = useState<Option[]>([]);
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -43,67 +43,114 @@ export const PokemonSelector: React.FC<PokemonSelectorProps> = ({
         if (!mounted) return;
         const opts: Option[] = (data.results as Array<{ name: string; url: string }>).map((p) => {
           const id = extractIdFromUrl(p.url);
-          return {
-            value: p.name, // usamos el nombre como clave externa
-            label: p.name,
-            id,
-            sprite: spriteUrl(id),
-          };
+          return { value: p.name, label: p.name, id, sprite: spriteUrl(id) };
         });
         setOptions(opts);
-      } catch (e) {
-        // no-op
       } finally {
         if (mounted) setLoading(false);
       }
     })();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  const filteredOptions = useMemo(() => options, [options]);
+  const filtered = useMemo(
+    () =>
+      query.trim()
+        ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase())).slice(0, 80)
+        : options.slice(0, 80),
+    [options, query]
+  );
+
+  const selectedOption = options.find((o) => o.value === value);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleSelect = (opt: Option) => {
+    onChange?.(opt.value);
+    setQuery("");
+    setOpen(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) { if (e.key === "Enter" || e.key === " ") setOpen(true); return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, filtered.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted((h) => Math.max(h - 1, 0)); }
+    else if (e.key === "Enter") { if (filtered[highlighted]) handleSelect(filtered[highlighted]); }
+    else if (e.key === "Escape") setOpen(false);
+  };
+
+  // Scroll highlighted into view
+  useEffect(() => {
+    if (!listRef.current) return;
+    const el = listRef.current.children[highlighted] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlighted]);
 
   return (
-    <Select
-      showSearch
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      style={style}
-      loading={loading}
-      optionFilterProp="label"
-      filterOption={(input, option) =>
-        (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-      }
-      virtual
-      listHeight={320}
-      options={filteredOptions.map((o) => ({
-        value: o.value,
-        label: o.label,
-        // custom render in dropdown via 'label' in optionRender for antd v5
-      }))}
-      optionRender={(option) => {
-        const o = options.find((x) => x.value === option.value);
-        if (!o) return option.label;
-        return (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Avatar size={24} src={o.sprite} shape="square" />
-            <span style={{ textTransform: "capitalize" }}>{o.label}</span>
+    <div ref={containerRef} className="relative w-full">
+      {/* Trigger / selected display */}
+      <button
+        type="button"
+        className="w-full flex items-center gap-2 px-3 py-3 rounded-xl bg-[#0d1117] border border-[#30363d] text-left text-sm text-slate-200 focus:outline-none focus:border-[#6ca2ff] transition-colors"
+        onClick={() => { setOpen((o) => !o); setTimeout(() => inputRef.current?.focus(), 50); }}
+        onKeyDown={handleKeyDown}
+      >
+        {selectedOption ? (
+          <>
+            <img src={selectedOption.sprite} alt="" className="w-6 h-6 object-contain" />
+            <span className="capitalize flex-1 truncate">{selectedOption.label}</span>
+          </>
+        ) : (
+          <span className="flex-1 text-slate-500">{loading ? "Cargando Pokémon..." : placeholder}</span>
+        )}
+        <span className={`text-slate-500 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>▾</span>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-50 w-full mt-1 rounded-xl border border-[#30363d] bg-[#161b22] shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-[#30363d]">
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setHighlighted(0); }}
+              onKeyDown={handleKeyDown}
+              placeholder="Buscar..."
+              className="w-full px-3 py-2 text-sm bg-[#0d1117] border border-[#30363d] rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#6ca2ff]"
+            />
           </div>
-        );
-      }}
-      // how the selected value shows in the input
-      labelRender={(props) => {
-        const o = options.find((x) => x.value === props.value);
-        if (!o) return <span>{props.label}</span>;
-        return (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Avatar size={18} src={o.sprite} shape="square" />
-            <span style={{ textTransform: "capitalize" }}>{o.label}</span>
+          <div ref={listRef} className="overflow-y-auto max-h-64">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-slate-500 text-center">Sin resultados</div>
+            ) : (
+              filtered.map((opt, i) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-left transition-colors
+                    ${i === highlighted ? "bg-[#6ca2ff]/10 text-[#6ca2ff]" : "text-slate-300 hover:bg-white/5"}
+                    ${value === opt.value ? "bg-[#6ca2ff]/5" : ""}
+                  `}
+                  onMouseEnter={() => setHighlighted(i)}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelect(opt); }}
+                >
+                  <img src={opt.sprite} alt="" className="w-7 h-7 object-contain flex-shrink-0" />
+                  <span className="capitalize">{opt.label}</span>
+                  {value === opt.value && <span className="ml-auto text-[#6ca2ff] text-xs">✓</span>}
+                </button>
+              ))
+            )}
           </div>
-        );
-      }}
-    />
+        </div>
+      )}
+    </div>
   );
 };

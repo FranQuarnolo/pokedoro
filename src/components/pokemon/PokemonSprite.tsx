@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import styles from "./PokemonSprite.module.css";
 
 const BASE_URL = "https://play.pokemonshowdown.com/sprites";
 
@@ -19,9 +18,7 @@ function pokeapiPngById(id: number) {
 }
 async function fetchIdByName(name: string): Promise<number | null> {
   try {
-    const r = await fetch(
-      `https://pokeapi.co/api/v2/pokemon/${showdownName(name)}`
-    );
+    const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${showdownName(name)}`);
     if (!r.ok) return null;
     const j = await r.json();
     return j?.id ?? null;
@@ -31,8 +28,8 @@ async function fetchIdByName(name: string): Promise<number | null> {
 }
 
 interface Props {
-  pokemonId: string; // nombre: "fearow"
-  isTimerRunning: boolean; // solo para futuras microinteracciones si querés
+  pokemonId: string;
+  isTimerRunning: boolean;
 }
 
 export const PokemonSprite: React.FC<Props> = ({ pokemonId }) => {
@@ -59,7 +56,7 @@ export const PokemonSprite: React.FC<Props> = ({ pokemonId }) => {
       src={src}
       alt={`${pokemonId} sprite`}
       onError={handleError}
-      className={`${styles.sprite} ${styles.center} ${styles.idleAnim ?? ""}`}
+      className="w-24 h-24 object-contain select-none drop-shadow-lg"
       draggable={false}
     />
   );

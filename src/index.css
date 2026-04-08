@@ -1,4 +1,4 @@
-/* src/index.css (o global.css) */
+@import "tailwindcss";
 
 /* Reset básico y configuración mobile-first */
 body {
@@ -58,4 +58,51 @@ body {
   .orientation-lock {
     display: flex;
   }
+}
+
+/* Timer display glow (applied when timer is running) */
+.timer-glow {
+  color: #e6edf3;
+  text-shadow: 0 0 32px rgba(108, 162, 255, 0.5), 0 0 8px rgba(108, 162, 255, 0.3);
+  transition: text-shadow 0.5s ease;
+}
+.timer-idle {
+  color: #e6edf3;
+  text-shadow: none;
+  transition: text-shadow 0.5s ease;
+}
+
+/* SVG progress ring transition */
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
+}
+
+/* Pokemon idle float animation */
+@keyframes idle-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -6px; }
+}
+.animate-idle-float {
+  will-change: translate;
+  animation: idle-float 2.4s ease-in-out infinite;
+}
+
+/* Slow bounce for running state */
+@keyframes bounce-slow {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -8px; }
+}
+.animate-bounce-slow {
+  will-change: translate;
+  animation: bounce-slow 1s ease-in-out infinite;
+}
+
+/* Slide up modal animation */
+@keyframes slide-up {
+  from { translate: 0 20px; opacity: 0; }
+  to { translate: 0 0; opacity: 1; }
+}
+.animate-slide-up {
+  will-change: translate, opacity;
+  animation: slide-up 0.25s ease-out;
 }
