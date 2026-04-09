@@ -29,9 +29,16 @@ export function Popconfirm({ title, description, onConfirm, children }: Popconfi
   const handleTrigger = (e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const POPUP_W = 240; // matches w-60
+    const GAP = 8;
+    const rawLeft = rect.left + rect.width / 2 + window.scrollX;
+    const clampedLeft = Math.max(
+      POPUP_W / 2 + GAP,
+      Math.min(rawLeft, window.innerWidth - POPUP_W / 2 - GAP)
+    );
     setPos({
       top: rect.top + window.scrollY - 10,
-      left: rect.left + rect.width / 2 + window.scrollX,
+      left: clampedLeft,
     });
     setOpen(true);
   };
