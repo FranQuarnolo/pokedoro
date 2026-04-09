@@ -1,28 +1,20 @@
 import { useState, useEffect } from "react";
 
-export const TYPE_COLORS: Record<string, string> = {
-  fire:     "#f97316",
-  water:    "#60a5fa",
-  grass:    "#4ade80",
-  electric: "#fbbf24",
-  psychic:  "#f472b6",
-  ice:      "#67e8f9",
-  dragon:   "#818cf8",
-  dark:     "#a8a29e",
-  ghost:    "#a78bfa",
-  fighting: "#f87171",
-  normal:   "#94a3b8",
-  poison:   "#c084fc",
-  ground:   "#d97706",
-  flying:   "#93c5fd",
-  bug:      "#86efac",
-  rock:     "#b5a06e",
-  steel:    "#94a3b8",
-  fairy:    "#fb7185",
+export const SPECIES_COLORS: Record<string, string> = {
+  black:  "#6b7280",
+  blue:   "#60a5fa",
+  brown:  "#d97706",
+  gray:   "#94a3b8",
+  green:  "#4ade80",
+  pink:   "#f472b6",
+  purple: "#a78bfa",
+  red:    "#f87171",
+  white:  "#e2e8f0",
+  yellow: "#fbbf24",
 };
 
 const DEFAULT_COLOR = "#6ca2ff";
-const CACHE_KEY = "poke_type_cache";
+const CACHE_KEY = "poke_species_color_cache";
 
 // Module-level in-memory cache (survives re-renders, not page reload)
 const memCache = new Map<string, string>();
@@ -40,8 +32,8 @@ function persist() {
   } catch { /* ignore */ }
 }
 
-export function typeToColor(type: string | null | undefined): string {
-  return type ? (TYPE_COLORS[type] ?? DEFAULT_COLOR) : DEFAULT_COLOR;
+export function speciesToColor(speciesColor: string | null | undefined): string {
+  return speciesColor ? (SPECIES_COLORS[speciesColor] ?? DEFAULT_COLOR) : DEFAULT_COLOR;
 }
 
 /** Converts a #rrggbb hex string to "r g b" for use with rgb(var / alpha%) */
@@ -53,31 +45,31 @@ export function hexToRgb(hex: string): string {
 }
 
 /**
- * Fetches and caches the primary type of a Pokemon, returns its accent color.
+ * Fetches and caches the species color of a Pokemon, returns its accent color.
  * Falls back to the app's default blue while loading or on error.
  * Workbox CacheFirst means subsequent fetches come from the SW cache.
  */
 export function usePokeType(pokemonId: string): string {
   const [color, setColor] = useState<string>(() =>
-    typeToColor(memCache.get(pokemonId) ?? null)
+    speciesToColor(memCache.get(pokemonId) ?? null)
   );
 
   useEffect(() => {
     // Already cached — update synchronously and bail
     const cached = memCache.get(pokemonId);
     if (cached) {
-      setColor(typeToColor(cached));
+      setColor(speciesToColor(cached));
       return;
     }
 
     const controller = new AbortController();
-    fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`, { signal: controller.signal })
+    fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemonId}`, { signal: controller.signal })
       .then((r) => r.json())
-      .then((data: { types?: Array<{ type: { name: string } }> }) => {
-        const type = data.types?.[0]?.type?.name ?? "normal";
-        memCache.set(pokemonId, type);
+      .then((data: { color?: { name: string } }) => {
+        const speciesColor = data.color?.name ?? "blue";
+        memCache.set(pokemonId, speciesColor);
         persist();
-        setColor(typeToColor(type));
+        setColor(speciesToColor(speciesColor));
       })
       .catch(() => { /* keep default color on error */ });
 
