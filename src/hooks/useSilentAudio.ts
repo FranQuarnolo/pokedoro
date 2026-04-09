@@ -15,7 +15,7 @@ export const useSilentAudio = () => {
       await ctx.resume();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      gain.gain.value = 0; // truly silent
+      gain.gain.value = 0.001; // near-silent but non-zero so Android keeps media session alive
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();

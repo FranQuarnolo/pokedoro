@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { PokemonSprite } from "../components/pokemon/PokemonSprite";
 import { usePomodoro } from "../hooks/usePomodoro";
 import { useTimers } from "../contexts/TimersContext";
@@ -21,6 +21,29 @@ const formatTime = (seconds: number) => {
   return `${mins}:${secs}`;
 };
 
+/** Plays a 3-note ascending chime using Web Audio API — no external files needed. */
+function playFinishChime() {
+  try {
+    const ctx = new AudioContext();
+    const notes = [523.25, 659.25, 783.99]; // C5 E5 G5
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.22;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.45, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    });
+    setTimeout(() => ctx.close(), 1200);
+  } catch { /* ignore */ }
+}
+
 // Official artwork is available by Pokemon ID only; use Showdown animated GIF by name as artwork
 function showdownGif(name: string) {
   const n = name.toLowerCase().replace(/\s+/g, "-").replace(/\./g, "").replace(/♀/g, "-f").replace(/♂/g, "-m");
@@ -38,30 +61,15 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
 
   const initialSeconds = Math.round(current.durationMinutes * 60);
 
-  // Sounds
-  const tapRef = useRef<HTMLAudioElement | null>(null);
-  const startRef = useRef<HTMLAudioElement | null>(null);
-  const endRef = useRef<HTMLAudioElement | null>(null);
-
   useEffect(() => {
-    tapRef.current = new Audio("/sounds/tap.mp3");
-    startRef.current = new Audio("/sounds/start.mp3");
-    endRef.current = new Audio("/sounds/end_timer.mp3");
-    [tapRef.current, startRef.current, endRef.current].forEach((a) => {
-      if (a) a.volume = 0.7;
-    });
     return () => { stopSilentAudio(); };
   }, [stopSilentAudio]);
-
-  const play = (ref: React.MutableRefObject<HTMLAudioElement | null>) => {
-    try { if (ref.current) { ref.current.currentTime = 0; ref.current.play(); } } catch {}
-  };
 
   const [hasStarted, setHasStarted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleFinish = useCallback(() => {
-    play(endRef);
+    playFinishChime();
     stopSilentAudio();
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     showToast({
@@ -108,8 +116,8 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
     artist: current.pokemonNickname || current.pokemonId,
     artwork: showdownGif(current.pokemonId),
     isPlaying: isRunning,
-    onPlay: useCallback(() => { play(startRef); start(); setHasStarted(true); }, [start]),
-    onPause: useCallback(() => { play(tapRef); pause(); }, [pause]),
+    onPlay: useCallback(() => { start(); setHasStarted(true); }, [start]),
+    onPause: useCallback(() => { pause(); }, [pause]),
   });
 
   // Update document title with timer
@@ -119,18 +127,15 @@ export const ActiveTimerPage: React.FC<Props> = ({ session, onBack }) => {
   }, [timeLeft, isRunning, current.name]);
 
   const handleStartPause = () => {
-    play(tapRef);
     if (isRunning) {
       pause();
     } else {
-      play(startRef);
       start();
       setHasStarted(true);
     }
   };
 
   const handleReset = () => {
-    play(tapRef);
     reset(initialSeconds);
     setHasStarted(false);
   };
