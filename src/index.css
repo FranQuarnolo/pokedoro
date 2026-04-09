@@ -97,6 +97,22 @@ body {
   animation: bounce-slow 1s ease-in-out infinite;
 }
 
+/* ── Type-colored cards ──────────────────────────────────────────── */
+/* Set style={{ "--type-color": "#hex", "--type-rgb": "r g b" }}     */
+/* Uses rgb(r g b / alpha%) — Chrome 65+, no color-mix() needed      */
+.card-idle {
+  background: linear-gradient(135deg, rgb(var(--type-rgb) / 6%) 0%, #161b22 55%);
+  border-color: rgb(var(--type-rgb) / 22%);
+}
+.card-active {
+  background: linear-gradient(135deg, rgb(var(--type-rgb) / 14%) 0%, #161b22 55%);
+  border-color: rgb(var(--type-rgb) / 55%);
+  box-shadow: 0 0 22px rgb(var(--type-rgb) / 18%);
+}
+.type-bar     { background: var(--type-color); }
+.type-text    { color: var(--type-color); }
+.type-bar-dim { background: var(--type-color); opacity: 0.45; }
+
 /* ── Drum roll picker ────────────────────────────────────────────── */
 /* Hide scrollbar but keep scroll functionality */
 .drum-scroll {

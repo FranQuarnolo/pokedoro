@@ -30,7 +30,6 @@ export function PokemonGridModal({ open, value, onChange, onClose }: Props) {
   const [options, setOptions] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const searchRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // Load pokemon list once
@@ -53,12 +52,9 @@ export function PokemonGridModal({ open, value, onChange, onClose }: Props) {
     return () => { mounted = false; };
   }, [options.length]);
 
-  // Focus search on open
+  // Reset query on open — do NOT focus the input (let user tap when needed)
   useEffect(() => {
-    if (open) {
-      setQuery("");
-      setTimeout(() => searchRef.current?.focus(), 100);
-    }
+    if (open) setQuery("");
   }, [open]);
 
   // Close on Escape
@@ -90,7 +86,7 @@ export function PokemonGridModal({ open, value, onChange, onClose }: Props) {
       style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      {/* Sheet */}
+      {/* Bottom sheet */}
       <div
         className="flex flex-col mt-auto w-full rounded-t-3xl animate-slide-up overflow-hidden"
         style={{
@@ -100,55 +96,72 @@ export function PokemonGridModal({ open, value, onChange, onClose }: Props) {
           borderBottom: "none",
         }}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+        {/* Drag handle + close row */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2 shrink-0">
+          <div className="w-10" /> {/* spacer */}
           <div className="w-10 h-1 rounded-full bg-white/20" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 pb-3 flex-shrink-0">
-          <input
-            ref={searchRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar Pokémon..."
-            className="flex-1 px-4 py-3 text-base rounded-2xl bg-[#0d1117] border border-[#30363d] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#6ca2ff] transition-colors"
-          />
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 flex items-center justify-center rounded-2xl text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors flex-shrink-0"
+            aria-label="Cerrar"
+            className="w-10 h-10 flex items-center justify-center rounded-2xl text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-colors"
           >
             ✕
           </button>
         </div>
 
-        {/* Grid */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-8">
+        {/* Grid — takes all remaining space */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-500 text-sm">
-              Cargando Pokémon...
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
+              <span className="text-3xl animate-pulse">⏳</span>
+              <span className="text-sm">Cargando Pokémon...</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="flex items-center justify-center py-16 text-slate-500 text-sm">
-              Sin resultados para "{query}"
+            <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-500">
+              <span className="text-3xl">🔍</span>
+              <span className="text-sm">Sin resultados para "{query}"</span>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              {filtered.map((pokemon) => {
-                const isSelected = pokemon.name === value;
-                return (
-                  <PokemonCell
-                    key={pokemon.name}
-                    pokemon={pokemon}
-                    isSelected={isSelected}
-                    onSelect={() => { onChange(pokemon.name); onClose(); }}
-                  />
-                );
-              })}
+              {filtered.map((pokemon) => (
+                <PokemonCell
+                  key={pokemon.name}
+                  pokemon={pokemon}
+                  isSelected={pokemon.name === value}
+                  onSelect={() => { onChange(pokemon.name); onClose(); }}
+                />
+              ))}
             </div>
           )}
+        </div>
+
+        {/* Search bar — pinned to bottom, above keyboard */}
+        <div className="shrink-0 px-3 py-3 border-t border-[#1e2736] bg-[#0d1117]/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-[#161b22] border border-[#30363d] focus-within:border-[#6ca2ff] transition-colors">
+            <span className="text-slate-500 text-base shrink-0">🔍</span>
+            <input
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar por nombre..."
+              className="flex-1 bg-transparent text-base text-slate-200 placeholder-slate-600 focus:outline-none"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="text-slate-500 hover:text-slate-300 transition-colors shrink-0 text-sm"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <p className="text-center text-xs text-slate-700 mt-2">
+            {filtered.length} Pokémon · tocá para seleccionar
+          </p>
         </div>
       </div>
     </div>,

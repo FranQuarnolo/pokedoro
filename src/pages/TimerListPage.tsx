@@ -16,6 +16,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { useTimers } from "../contexts/TimersContext";
 import { useTimerStatus } from "../hooks/useTimerStatus";
+import { usePokeType, hexToRgb } from "../hooks/usePokeType";
 import type { PomoSession } from "../types";
 import logo from "../assets/logo.png";
 import { SessionModal } from "./SessionModal";
@@ -51,8 +52,14 @@ const SortableItem: React.FC<{
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: session.id });
 
-  // dnd-kit needs dynamic pixel values as inline style
+  // Type color from PokeAPI (cached, updates asynchronously)
+  const typeColor = usePokeType(session.pokemonId);
+
+  // dnd-kit transform/transition must be inline (dynamic pixel values).
+  // CSS variables are set here so static CSS classes can reference them.
   const dragStyle = {
+    "--type-color": typeColor,
+    "--type-rgb": hexToRgb(typeColor),
     transform: CSS.Transform.toString(transform),
     transition,
   } as React.CSSProperties;
@@ -63,24 +70,21 @@ const SortableItem: React.FC<{
       style={dragStyle}
       {...attributes}
       {...listeners}
-      className={`relative flex items-center gap-3 px-4 py-4 rounded-2xl border transition-all duration-200 cursor-pointer active:scale-[0.99]
+      className={`relative flex items-center gap-3 px-4 py-4 rounded-2xl border transition-all duration-300 cursor-pointer active:scale-[0.99]
         ${isDragging ? "opacity-60 z-10 scale-[1.02]" : ""}
-        ${isActive
-          ? "border-[#6ca2ff]/50 bg-gradient-to-r from-[#1a2535] to-[#161b22] shadow-[0_0_20px_rgba(108,162,255,0.12)]"
-          : "border-[#1e2736] bg-[#161b22] hover:border-[#30363d] hover:-translate-y-0.5"
-        }`}
+        ${!isActive ? "hover:-translate-y-0.5" : ""}
+        ${isActive ? "card-active" : "card-idle"}
+      `}
       onClick={onClick}
     >
-      {/* Active indicator bar */}
-      {isActive && (
-        <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#6ca2ff]" />
-      )}
+      {/* Type-colored left indicator bar */}
+      <div className={`absolute left-0 top-3 bottom-3 w-0.75 rounded-r-full transition-all duration-300 ${isActive ? "type-bar" : "type-bar-dim"}`} />
 
       {/* Content */}
       <div className="flex-1 min-w-0 pl-1">
-        {/* Duration + Session name row */}
+        {/* Duration (type color) + Session name (white) — visually distinct */}
         <div className="flex items-baseline gap-2">
-          <span className={`text-base font-bold tabular-nums flex-shrink-0 ${isActive ? "text-[#6ca2ff]" : "text-slate-300"}`}>
+          <span className="text-base font-bold tabular-nums shrink-0 transition-colors duration-300 type-text">
             {formatDuration(session.durationMinutes)}
           </span>
           <span className="text-base font-semibold text-slate-100 truncate">
@@ -90,18 +94,18 @@ const SortableItem: React.FC<{
         {/* Pokemon nickname */}
         <p className="text-sm text-slate-500 capitalize mt-0.5 truncate">
           {session.pokemonNickname
-            ? `${session.pokemonNickname} (${session.pokemonId})`
+            ? `${session.pokemonNickname} · ${session.pokemonId}`
             : session.pokemonId}
         </p>
       </div>
 
-      {/* Right side: countdown if active, delete otherwise */}
-      <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-        {timeLeft !== null ? (
-          <span className="text-xl font-bold tabular-nums text-[#6ca2ff] min-w-[56px] text-right">
+      {/* Right side: live countdown + delete */}
+      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+        {timeLeft !== null && (
+          <span className="text-xl font-bold tabular-nums min-w-14.5 text-right transition-colors duration-300 type-text">
             {formatTime(timeLeft)}
           </span>
-        ) : null}
+        )}
 
         <Popconfirm
           title="¿Borrar este timer?"
@@ -111,7 +115,7 @@ const SortableItem: React.FC<{
           <button
             type="button"
             aria-label="Eliminar sesión"
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-700 hover:text-red-400 hover:bg-red-400/10 transition-colors"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" />
@@ -156,7 +160,7 @@ export const TimerListPage: React.FC<Props> = ({ onSessionSelect }) => {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen w-full max-w-[480px] mx-auto px-4 pb-28">
+    <div className="flex flex-col items-center min-h-screen w-full max-w-120 mx-auto px-4 pb-28">
       {/* Header */}
       <div className="flex flex-col items-center pt-12 pb-8">
         <img src={logo} alt="Pokedoro logo" className="w-40 object-contain mb-2" />
@@ -203,7 +207,7 @@ export const TimerListPage: React.FC<Props> = ({ onSessionSelect }) => {
       {/* FAB */}
       <Button
         variant="primary"
-        className="fixed bottom-8 right-5 w-16 h-16 !rounded-2xl !p-0 text-3xl leading-none shadow-xl"
+        className="fixed bottom-8 right-5 w-16 h-16 rounded-2xl! p-0! text-3xl leading-none shadow-xl"
         onClick={() => setIsModalOpen(true)}
         aria-label="Crear nueva sesión"
       >
